@@ -8,13 +8,15 @@ namespace Meow.NetLinker
     {
         private readonly RawBytesCallback _callback;
         private readonly int _initPostion;
+        private readonly int _versionNum;
         
         private readonly Dictionary<int, int> _msgNumListenerCount = new Dictionary<int, int>();
 
         public OutPutFunc OutPut;
         
-        public RawByteDispatcher(int initPosition, RawBytesCallback callback)
+        public RawByteDispatcher(int versionNum, int initPosition, RawBytesCallback callback)
         {
+            _versionNum = versionNum;
             _initPostion = initPosition;
             _callback = callback;
         }
@@ -22,6 +24,7 @@ namespace Meow.NetLinker
         public void Send(int msgNum, byte[] bytes)
         {
             var pack = DataPackPool.GetDataPack(_initPostion, bytes);
+            pack.TryAddDataToDict("VersionNum", -1, -1, _versionNum, typeof(int));
             pack.TryAddDataToDict("MsgNum", -1, -1, msgNum, typeof(int));
             pack.TryAddDataToDict("MsgBody", _initPostion, bytes.Length, null, null);
             OutPut(pack);
@@ -52,7 +55,7 @@ namespace Meow.NetLinker
         public void Input(DataPack dataPack)
         {
             var msgNum = (int) dataPack.DataDict["MsgNum"].Data;
-            if (_msgNumListenerCount[msgNum] > 0)
+            if (_msgNumListenerCount.ContainsKey(msgNum) && _msgNumListenerCount[msgNum] > 0)
             {
                 _callback.Invoke(msgNum, dataPack.ReadAllBytes());
             }

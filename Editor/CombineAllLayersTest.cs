@@ -23,7 +23,7 @@ namespace Meow.NetLinker.Test
         {
             try
             {
-                _dispatcher = new MessageDispatcher();
+                _dispatcher = new MessageDispatcher(1);
                 _protobuf = new ProtobufLayer(12);
                 _head = new HeadLayer();
                 _kcp = new KcpLayer(0);
