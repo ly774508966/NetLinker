@@ -20,7 +20,7 @@ namespace Meow.NetLinker.Test
         [UnityTest]
         public IEnumerator RawByteDispatcherSendTest()
         {
-            _dispatcher = new RawByteDispatcher(1, 12, (num, bytes) => { });
+            _dispatcher = new RawByteDispatcher(1, 12);
 
             _dispatcher.OutPut += pack =>
             {
@@ -46,19 +46,15 @@ namespace Meow.NetLinker.Test
         [UnityTest]
         public IEnumerator RawByteDispatcherAddRemoveListenerTest()
         {
-            _dispatcher = new RawByteDispatcher(1, 0, (num, bytes) =>
-            {
-                _receivedMsgNum = num;
-                _receivedBytes = bytes;
-            });
+            _dispatcher = new RawByteDispatcher(1, 0);
             
-            _dispatcher.AddListener(0);
+            _dispatcher.AddListener(0, Callback);
 
             var dataPack = DataPackPool.GetDataPack();
             var msgBytes = new byte[] {1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 0, 1};
             dataPack.TryAddDataToDict("VersionNum", -1, -1, 1, typeof(int));
             dataPack.TryAddDataToDict("MsgNum", -1, -1, 0, typeof(int));
-            dataPack.TryAddDataToDict("MsgBodu", 0, msgBytes.Length, null, null);
+            dataPack.TryAddDataToDict("MsgBody", 0, msgBytes.Length, null, null);
             dataPack.PrepareWriteAfter(msgBytes.Length);
             dataPack.Writer.Write(msgBytes);
             dataPack.Position = 0;
@@ -81,12 +77,12 @@ namespace Meow.NetLinker.Test
             msgBytes = new byte[] {1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 0, 0};
             dataPack.TryAddDataToDict("VersionNum", -1, -1, 1, typeof(int));
             dataPack.TryAddDataToDict("MsgNum", -1, -1, 0, typeof(int));
-            dataPack.TryAddDataToDict("MsgBodu", 0, msgBytes.Length, null, null);
+            dataPack.TryAddDataToDict("MsgBody", 0, msgBytes.Length, null, null);
             dataPack.PrepareWriteAfter(msgBytes.Length);
             dataPack.Writer.Write(msgBytes);
             dataPack.Position = 0;
             
-            _dispatcher.RemoveListener(0);
+            _dispatcher.RemoveListener(0, Callback);
             
             try
             {
@@ -102,6 +98,12 @@ namespace Meow.NetLinker.Test
             Assert.AreEqual(_receivedBytes, new byte[] {1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 0, 1});
             
             yield return null;
+        }
+
+        private void Callback(int msgNum, byte[] bytes)
+        {
+            _receivedMsgNum = msgNum;
+            _receivedBytes = bytes;
         }
     }
 }

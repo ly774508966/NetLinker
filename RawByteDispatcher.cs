@@ -6,19 +6,17 @@ namespace Meow.NetLinker
     
     public class RawByteDispatcher
     {
-        private readonly RawBytesCallback _callback;
         private readonly int _initPostion;
         private readonly int _versionNum;
-        
-        private readonly Dictionary<int, int> _msgNumListenerCount = new Dictionary<int, int>();
+
+        private readonly Dictionary<int, List<RawBytesCallback>> _msgNumListenerCount = new Dictionary<int, List<RawBytesCallback>>();
 
         public OutPutFunc OutPut;
         
-        public RawByteDispatcher(int versionNum, int initPosition, RawBytesCallback callback)
+        public RawByteDispatcher(int versionNum, int initPosition)
         {
             _versionNum = versionNum;
             _initPostion = initPosition;
-            _callback = callback;
         }
 
         public void Send(int msgNum, byte[] bytes)
@@ -31,23 +29,22 @@ namespace Meow.NetLinker
         }
 
 
-        public void AddListener(int msgNum)
+        public void AddListener(int msgNum, RawBytesCallback callback)
         {
             if (!_msgNumListenerCount.ContainsKey(msgNum))
             {
-                _msgNumListenerCount.Add(msgNum, 0);
+                _msgNumListenerCount.Add(msgNum, new List<RawBytesCallback>());
             }
-            _msgNumListenerCount[msgNum]++;
+            _msgNumListenerCount[msgNum].Add(callback);
         }
 
-        public void RemoveListener(int msgNum)
+        public void RemoveListener(int msgNum,  RawBytesCallback callback)
         {
             if (_msgNumListenerCount.ContainsKey(msgNum))
             {
-                _msgNumListenerCount[msgNum]--;
-                if (_msgNumListenerCount[msgNum] == 0)
+                if (_msgNumListenerCount[msgNum].Contains(callback))
                 {
-                    _msgNumListenerCount.Remove(msgNum);
+                    _msgNumListenerCount[msgNum].Remove(callback);
                 }
             }
         }
@@ -55,9 +52,14 @@ namespace Meow.NetLinker
         public void Input(DataPack dataPack)
         {
             var msgNum = (int) dataPack.DataDict["MsgNum"].Data;
-            if (_msgNumListenerCount.ContainsKey(msgNum) && _msgNumListenerCount[msgNum] > 0)
+            var length = dataPack.DataDict["MsgBody"].Length;
+            var bytes = dataPack.Reader.ReadBytes(length);
+            if (_msgNumListenerCount.ContainsKey(msgNum))
             {
-                _callback.Invoke(msgNum, dataPack.ReadAllBytes());
+                foreach (var callback in _msgNumListenerCount[msgNum])
+                {
+                    callback.Invoke(msgNum, bytes);
+                }
             }
         }
 
